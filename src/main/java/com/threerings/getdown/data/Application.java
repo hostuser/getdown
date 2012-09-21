@@ -542,11 +542,22 @@ public class Application
             throw new IOException("m.missing_class");
         }
 
-        // check to see if we require a particular JVM version and have a supplied JVM
+        // check to see if we require a particular min JVM version and have a supplied JVM
         vstr = (String)cdata.get("java_version");
         if (vstr != null) {
             try {
                 _javaVersion = Integer.parseInt(vstr);
+            } catch (Exception e) {
+                String err = MessageUtil.tcompose("m.invalid_java_version", vstr);
+                throw (IOException) new IOException(err).initCause(e);
+            }
+        }
+        
+        // check to see if we require a particular max JVM version and have a supplied JVM
+        vstr = (String)cdata.get("java_version_max");
+        if (vstr != null) {
+            try {
+                _javaVersionMax = Integer.parseInt(vstr);
             } catch (Exception e) {
                 String err = MessageUtil.tcompose("m.invalid_java_version", vstr);
                 throw (IOException) new IOException(err).initCause(e);
@@ -759,7 +770,7 @@ public class Application
     public boolean haveValidJavaVersion ()
     {
         // if we're doing no version checking, then yay!
-        if (_javaVersion <= 0) {
+        if (_javaVersion <= 0 && _javaVersionMax <= 0) {
             return true;
         }
 
@@ -785,7 +796,16 @@ public class Application
         int revis = Integer.parseInt(m.group(3));
         int patch = m.group(4) == null ? 0 : Integer.parseInt(m.group(4).substring(1));
         int version = patch + 100 * (revis + 100 * (minor + 100 * major));
-        return version >= _javaVersion;
+        boolean minVersionOK =  true;
+        if ( _javaVersion > 0 ) {
+        	minVersionOK = version >= _javaVersion;
+        }
+        boolean maxVersionOK = true;
+        if ( _javaVersionMax > 0 ) {
+        	maxVersionOK = version <= _javaVersionMax;
+        }
+        
+        return minVersionOK && maxVersionOK;
     }
 
     /**
@@ -1646,6 +1666,7 @@ public class Application
     protected int _trackingId;
 
     protected int _javaVersion;
+    protected int _javaVersionMax;
     protected String _javaLocation;
 
     protected List<Resource> _codes = new ArrayList<Resource>();
